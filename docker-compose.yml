@@ -1,0 +1,46 @@
+
+
+services:
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=feedback_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=dhanshri
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    command: >
+      sh -c "
+             python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin123', role='admin')\" &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_NAME=feedback_db
+      - DB_USER=postgres
+      - DB_PASSWORD=dhanshri
+      - DB_HOST=db
+      - DB_PORT=5432
+    env_file:
+      - .env
+      
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
