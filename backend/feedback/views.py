@@ -21,19 +21,11 @@ class UserRegistrationView(generics.CreateAPIView):
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.all().order_by('-created_at')
     serializer_class = FeedbackSerializer
-    # Only authenticated users can see the dashboard.
-    # AllowAny for create lets non-logged-in users submit feedback.
-    permission_classes = [permissions.IsAuthenticated]
 
     def get_permissions(self):
         if self.action == 'create':
             return [permissions.AllowAny()]
-        return super().get_permissions()
-
-class FeedbackViewSet(viewsets.ModelViewSet):
-    queryset = Feedback.objects.all().order_by('-created_at')
-    serializer_class = FeedbackSerializer
-    permission_classes = [permissions.AllowAny]
+        return [permissions.IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -61,7 +53,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
                     f'A new piece of negative feedback has been submitted by {feedback_instance.name}.\n\nComments: {feedback_instance.comments}',
                     'no-reply@feedbacksystem.com',
                     admin_emails,
-                    fail_silently=False, # Set to True in production if needed
+                    fail_silently=False,
                 )
 
         headers = self.get_success_headers(serializer.data)
