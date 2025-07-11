@@ -5,7 +5,7 @@ const apiClient = axios.create({
     baseURL: 'http://localhost:8000/api/',
 });
 
-// Interceptor to add the token to every request
+// ✅ Add access token to each request
 apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('accessToken');
@@ -14,12 +14,10 @@ apiClient.interceptors.request.use(
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
-// Function to handle login
+// ✅ Login - store tokens
 export const login = async (credentials) => {
     const response = await apiClient.post('/token/', credentials);
     localStorage.setItem('accessToken', response.data.access);
@@ -27,28 +25,29 @@ export const login = async (credentials) => {
     return response.data;
 };
 
-// Function to handle logout
+// ✅ Logout - remove tokens
 export const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
 };
 
-// Function to get the current user's role from the token
+// ✅ Decode JWT to extract user role
 export const getUserRole = () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
+
     try {
         const decoded = jwtDecode(token);
-        return decoded.role; // Assuming your token includes the user's role
+        return decoded.role || null; // role should be in your token's payload
     } catch (error) {
-        console.error("Invalid token:", error);
+        console.error("Invalid or expired token:", error);
         logout();
         return null;
     }
 };
 
-
-export default {
+// ✅ Main API services
+const api = {
     getFeedback() {
         return apiClient.get('feedback/');
     },
@@ -57,5 +56,16 @@ export default {
     },
     registerUser(data) {
         return apiClient.post('register/', data);
-    }
+    },
+    getDepartments() {
+        return apiClient.get('departments/');
+    },
+    respondToFeedback(feedbackId, response) {
+        return apiClient.post(`feedback/${feedbackId}/respond/`, response);
+    },
+    getReport() {
+        return apiClient.get('feedback/report/');
+    },
 };
+
+export default api;

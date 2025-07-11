@@ -1,13 +1,13 @@
-# In backend/feedback/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import FeedbackViewSet, UserRegistrationView # Import new view
+from .views import FeedbackViewSet, UserViewSet, DepartmentListView, UserRegistrationView
 
 router = DefaultRouter()
 router.register(r'feedback', FeedbackViewSet, basename='feedback')
+router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    # Add the registration URL
-    path('register/', UserRegistrationView.as_view(), name='user_register'),
+    path('departments/', DepartmentListView.as_view(), name='department-list'),
+    path('register/', UserRegistrationView.as_view(), name='user-register'),
 ]

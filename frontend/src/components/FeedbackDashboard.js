@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import api, { getUserRole } from '../services/api';
 import SentimentChart from './SentimentChart';
 import ReactPaginate from 'react-paginate';
-
-import './FeedbackDashboard.css'; // optional CSS for styling pagination
+import { Navigate } from 'react-router-dom';
+import './FeedbackDashboard.css';
 
 const FeedbackDashboard = () => {
+    const [roleChecked, setRoleChecked] = useState(false);
+    const [role, setRole] = useState('');
     const [feedbackList, setFeedbackList] = useState([]);
     const [filteredFeedback, setFilteredFeedback] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,8 +15,17 @@ const FeedbackDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sentimentFilter, setSentimentFilter] = useState('All');
     const [currentPage, setCurrentPage] = useState(0);
+    const [replyText, setReplyText] = useState('');
+    const [replyingToId, setReplyingToId] = useState(null);
 
     const itemsPerPage = 5;
+
+    // ✅ Check user role and restrict customers
+    useEffect(() => {
+        const r = getUserRole();
+        setRole(r);
+        setRoleChecked(true);
+    }, []);
 
     useEffect(() => {
         const fetchFeedback = async () => {
@@ -29,6 +40,7 @@ const FeedbackDashboard = () => {
                 setLoading(false);
             }
         };
+
         fetchFeedback();
     }, []);
 
@@ -57,12 +69,34 @@ const FeedbackDashboard = () => {
 
     const handlePageClick = ({ selected }) => setCurrentPage(selected);
 
+    // 🛑 Guard rendering for unauthorized customer
+    if (!roleChecked) return null;
+    if (role === 'customer') return <Navigate to="/" />;
     if (loading) return <p>Loading feedback...</p>;
     if (error) return <p className="error">{error}</p>;
+
+    const handleReplySubmit = async (feedbackId) => {
+        if (!replyText.trim()) return;
+
+        try {
+            await api.respondToFeedback(feedbackId, { response: replyText });
+            alert('Reply sent successfully.');
+            setReplyText('');
+            setReplyingToId(null);
+
+            // Refresh data
+            const res = await api.getFeedback();
+            setFeedbackList(res.data);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to send reply.');
+        }
+    };
 
     return (
         <div className="dashboard-container">
             <h2>Feedback Dashboard</h2>
+
             <div className="chart-container">
                 <SentimentChart feedbackData={filteredFeedback} />
             </div>
@@ -92,7 +126,9 @@ const FeedbackDashboard = () => {
                             <th>Type</th>
                             <th>Comments</th>
                             <th>Sentiment</th>
-                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Response</th>
+                            {role === 'head' && <th>Action</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -104,12 +140,39 @@ const FeedbackDashboard = () => {
                                     <td>{item.feedback_type}</td>
                                     <td>{item.comments}</td>
                                     <td className={`sentiment-${item.sentiment?.toLowerCase()}`}>{item.sentiment}</td>
-                                    <td>{new Date(item.created_at).toLocaleString()}</td>
+                                    <td>{item.status}</td>
+                                    <td>{item.response || '-'}</td>
+                                    {role === 'employee' && (
+                                        <td>
+                                            {item.status !== 'Closed' ? (
+                                                <>
+                                                    {replyingToId === item.id ? (
+                                                        <div>
+                                                            <textarea
+                                                                value={replyText}
+                                                                onChange={e => setReplyText(e.target.value)}
+                                                                rows={2}
+                                                                cols={25}
+                                                                placeholder="Write your reply..."
+                                                            />
+                                                            <br />
+                                                            <button onClick={() => handleReplySubmit(item.id)}>Send</button>
+                                                            <button onClick={() => setReplyingToId(null)}>Cancel</button>
+                                                        </div>
+                                                    ) : (
+                                                        <button onClick={() => setReplyingToId(item.id)}>Reply</button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                'Closed'
+                                            )}
+                                        </td>
+                                    )}
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6">No feedback found.</td>
+                                <td colSpan="8">No feedback found.</td>
                             </tr>
                         )}
                     </tbody>
