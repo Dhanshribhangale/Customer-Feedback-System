@@ -81,8 +81,26 @@ class FeedbackViewSet(viewsets.ModelViewSet):
             feedback_instance.user = request.user
             feedback_instance.save()
 
-        # 🔄 Escalate to EMPLOYEE (not head) if sentiment is negative
-        if sentiment == "Negative":
+        # ✅ Auto-reply if feedback is Positive
+        if sentiment == "Positive":
+            feedback_instance.response = "Thank you for your positive feedback!"
+            feedback_instance.status = "Closed"
+            feedback_instance.save()
+
+            if feedback_instance.email:
+                try:
+                    send_mail(
+                        'Thank You for Your Feedback',
+                        'We appreciate your positive feedback. 😊\n\nResponse:\nThank you for your positive feedback!',
+                        'no-reply@feedbacksystem.com',
+                        [feedback_instance.email],
+                        fail_silently=False
+                    )
+                except Exception as e:
+                    print(f"Failed to send email to customer (positive): {e}")
+
+        # 🚨 Escalate to employee if Negative
+        elif sentiment == "Negative":
             feedback_instance.is_escalated = True
             feedback_instance.save()
 
@@ -102,7 +120,6 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    # 🔄 Respond now only allowed for EMPLOYEE
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def respond(self, request, pk=None):
         feedback = self.get_object()
@@ -119,7 +136,6 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         feedback.responded_by = request.user
         feedback.save()
 
-        # Notify customer via email
         if feedback.email:
             try:
                 send_mail(
@@ -134,7 +150,6 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'Reply sent successfully'})
 
-    # ✅ Inline report action for heads
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def report(self, request):
         if request.user.role != 'head':
@@ -152,12 +167,10 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         })
 
 
-# ✅ Moved outside of class
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def department_feedback_report(request):
     user = request.user
-
     if user.role != 'head':
         return Response({'error': 'Unauthorized'}, status=403)
 

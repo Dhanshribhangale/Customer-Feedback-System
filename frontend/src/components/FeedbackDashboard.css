@@ -13,6 +13,28 @@
   padding: 0;
 }
 
+.export-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.export-buttons button {
+    padding: 6px 12px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.export-buttons button:hover {
+    background-color: #0056b3;
+}
+
+
 .pagination li {
   padding: 6px 12px;
   border: 1px solid #ccc;
@@ -23,4 +45,15 @@
   background-color: #007bff;
   color: white;
   font-weight: bold;
+}
+
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+canvas {
+  max-width: 100% !important;
 }

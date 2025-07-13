@@ -17,8 +17,9 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// ✅ Feedback submission (used by customers)
 export const submitFeedback = (data) =>
-    apiClient.post('feedback/', data); // token already added via interceptor
+    apiClient.post('feedback/', data);
 
 // ✅ Login - store tokens
 export const login = async (credentials) => {
@@ -41,7 +42,7 @@ export const getUserRole = () => {
 
     try {
         const decoded = jwtDecode(token);
-        return decoded.role || null; // role should be in your token's payload
+        return decoded.role || null;
     } catch (error) {
         console.error("Invalid or expired token:", error);
         logout();
@@ -69,6 +70,11 @@ const api = {
     getReport() {
         return apiClient.get('feedback/report/');
     },
+    
+    // ✅ Optional: use api.get('/any-endpoint/') style
+    get(url) {
+        return apiClient.get(url);
+    }
 };
 
 export default api;

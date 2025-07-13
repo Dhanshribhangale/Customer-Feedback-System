@@ -45,7 +45,7 @@ class Feedback(models.Model):
     FEEDBACK_TYPE_CHOICES = (
         ('Complaint', 'Complaint'),
         ('Suggestion', 'Suggestion'),
-        ('Compliment', 'Compliment'),
+        ('Appreciation', 'Appreciation'),
     )
 
     STATUS_CHOICES = (

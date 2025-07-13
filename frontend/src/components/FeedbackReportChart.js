@@ -1,29 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Pie } from 'react-chartjs-2';
-import api from '../services/api';
 
-const FeedbackReportChart = () => {
-    const [reportData, setReportData] = useState(null);
-
-    useEffect(() => {
-        const fetchReport = async () => {
-            try {
-                const response = await api.get('/feedback/report/');
-                setReportData(response.data);
-            } catch (error) {
-                console.error('Error fetching report data:', error);
-            }
-        };
-        fetchReport();
-    }, []);
-
-    if (!reportData) return <p>Loading report...</p>;
-
+const FeedbackReportChart = ({ reportData }) => {
     const data = {
         labels: ['Received', 'Closed', 'Pending'],
         datasets: [
             {
-                data: [reportData.received, reportData.closed, reportData.pending],
+                data: [
+                    reportData.total_feedbacks,
+                    reportData.closed_feedbacks,
+                    reportData.pending_feedbacks,
+                ],
                 backgroundColor: ['#36a2eb', '#28a745', '#ffc107'],
                 borderWidth: 1,
             },
