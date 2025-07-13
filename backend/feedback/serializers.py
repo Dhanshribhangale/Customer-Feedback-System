@@ -1,5 +1,28 @@
 from rest_framework import serializers
 from .models import Feedback, User, Department
+# serializers.py
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # ✅ Add custom claims here
+        token['role'] = user.role
+        token['email'] = user.email
+        token['username'] = user.username
+
+        return token
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['role'] = self.user.role
+        data['username'] = self.user.username
+        data['email'] = self.user.email
+        return data
 
 
 # Department Serializer
@@ -78,6 +101,7 @@ class FeedbackSerializer(serializers.ModelSerializer):
             'response',
             'status',
             'is_escalated',
+            'user'
         )
 
     def get_fields(self):

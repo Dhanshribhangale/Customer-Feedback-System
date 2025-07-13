@@ -1,14 +1,13 @@
-# views.py
-
 from django.shortcuts import render
 from rest_framework import viewsets, permissions, status, generics
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from .models import Feedback, User, Department
-from .serializers import FeedbackSerializer, UserSerializer, DepartmentSerializer
+from .serializers import FeedbackSerializer, UserSerializer, DepartmentSerializer, CustomTokenObtainPairSerializer
 from textblob import TextBlob
 from django.core.mail import send_mail
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 class DepartmentListView(generics.ListAPIView):
@@ -21,6 +20,10 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
+
+
+class CustomTokenView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -56,7 +59,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         elif user.role in ['head', 'employee']:
             return Feedback.objects.filter(department=user.department).order_by('-created_at')
         elif user.role == 'customer':
-            return Feedback.objects.filter(email=user.email).order_by('-created_at')
+            return Feedback.objects.filter(name=user.username).order_by('-created_at')
 
         return Feedback.objects.none()
 
@@ -73,6 +76,10 @@ class FeedbackViewSet(viewsets.ModelViewSet):
             sentiment = "Negative"
 
         feedback_instance = serializer.save(sentiment=sentiment)
+
+        if request.user.is_authenticated:
+            feedback_instance.user = request.user
+            feedback_instance.save()
 
         # 🔄 Escalate to EMPLOYEE (not head) if sentiment is negative
         if sentiment == "Negative":
@@ -100,7 +107,6 @@ class FeedbackViewSet(viewsets.ModelViewSet):
     def respond(self, request, pk=None):
         feedback = self.get_object()
 
-        # 🔄 Change authorization: now only employees can respond
         if request.user.role != 'employee' or request.user.department != feedback.department:
             return Response({"error": "Not authorized to respond"}, status=403)
 
@@ -128,7 +134,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'Reply sent successfully'})
 
-    # ✅ Report still only allowed for heads (optional to change)
+    # ✅ Inline report action for heads
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def report(self, request):
         if request.user.role != 'head':
@@ -144,3 +150,26 @@ class FeedbackViewSet(viewsets.ModelViewSet):
             'closed_feedbacks': closed,
             'pending_feedbacks': pending,
         })
+
+
+# ✅ Moved outside of class
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def department_feedback_report(request):
+    user = request.user
+
+    if user.role != 'head':
+        return Response({'error': 'Unauthorized'}, status=403)
+
+    department = user.department
+    feedbacks = Feedback.objects.filter(department=department)
+
+    received_count = feedbacks.count()
+    closed_count = feedbacks.filter(status='Closed').count()
+    pending_count = feedbacks.filter(status='Pending').count()
+
+    return Response({
+        'received': received_count,
+        'closed': closed_count,
+        'pending': pending_count
+    })

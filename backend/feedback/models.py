@@ -18,7 +18,7 @@ class User(AbstractUser):
         ('head', 'Department Head'),
         ('admin', 'Admin'),
     )
-
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     department = models.ForeignKey(
         Department,
@@ -31,6 +31,14 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
+    # Add this field to Feedback model
+user = models.ForeignKey(
+    User,
+    on_delete=models.CASCADE,
+    null=True,
+    blank=True,
+    related_name='feedbacks'
+)
 
 # Feedback Model
 class Feedback(models.Model):

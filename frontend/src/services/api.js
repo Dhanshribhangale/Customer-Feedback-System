@@ -17,6 +17,9 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+export const submitFeedback = (data) =>
+    apiClient.post('feedback/', data); // token already added via interceptor
+
 // ✅ Login - store tokens
 export const login = async (credentials) => {
     const response = await apiClient.post('/token/', credentials);

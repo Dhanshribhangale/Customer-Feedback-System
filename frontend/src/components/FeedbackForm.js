@@ -1,105 +1,115 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import './FeedbackForm.css'; // ✅ CSS for styling
 
 const FeedbackForm = () => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        feedback_type: 'Suggestion',
+        feedback_type: '',
         comments: '',
         department: '',
     });
 
     const [departments, setDepartments] = useState([]);
-    const [loadingDepartments, setLoadingDepartments] = useState(true);
-    const [message, setMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        api.getDepartments()
-            .then(response => {
-                 console.log("Loaded departments:", response.data); 
+        const fetchDepartments = async () => {
+            try {
+                const response = await api.getDepartments();
                 setDepartments(response.data);
-                setLoadingDepartments(false);
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error('Error fetching departments:', error);
-                setLoadingDepartments(false);
-            });
+            }
+        };
+        fetchDepartments();
     }, []);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setMessage('');
         try {
             await api.submitFeedback(formData);
-            setMessage('✅ Thank you! Your feedback has been submitted successfully.');
+            setSuccessMessage('✅ Feedback submitted successfully!');
+            setErrorMessage('');
             setFormData({
                 name: '',
                 email: '',
-                feedback_type: 'Suggestion',
+                feedback_type: '',
                 comments: '',
                 department: '',
             });
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
-            console.error('Error submitting feedback:', error);
-            setMessage('❌ Error: Could not submit feedback. Please try again.');
+            console.error('Feedback submission failed:', error);
+            setErrorMessage('❌ Failed to submit feedback. Please try again.');
         }
     };
 
     return (
-        <div className="form-container">
-            <h2>Customer Feedback</h2>
-            <p>We’d love to hear your thoughts, suggestions, or concerns.</p>
-
-            <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label>Name</label>
-                    <input type="text" name="name" value={formData.name} onChange={handleChange} required />
-                </div>
-
-                <div className="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} required />
-                </div>
-
-                <div className="form-group">
-                    <label>Feedback Type</label>
-                    <select name="feedback_type" value={formData.feedback_type} onChange={handleChange} required>
-                        <option value="Suggestion">Suggestion</option>
-                        <option value="Complaint">Complaint</option>
-                        <option value="Compliment">Compliment</option>
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label>Department</label>
-                    <select name="department" value={formData.department} onChange={handleChange} required>
-                        <option value="">-- Select Department --</option>
-                        {loadingDepartments ? (
-                            <option disabled>Loading departments...</option>
-                        ) : departments.length === 0 ? (
-                            <option disabled>No departments available</option>
-                        ) : (
-                            departments.map(dept => (
-                                <option key={dept.id} value={dept.id}>{dept.name}</option>
-                            ))
-                        )}
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label>Comments</label>
-                    <textarea name="comments" value={formData.comments} onChange={handleChange} required rows="5" />
-                </div>
-
-                <button type="submit">Submit Feedback</button>
+        <div className="feedback-form-container">
+            <h2>💬 Submit Feedback</h2>
+            <form onSubmit={handleSubmit} className="feedback-form">
+                <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Your Name"
+                    required
+                />
+                <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Your Email"
+                    required
+                />
+                <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                >
+                    <option value="">Select Department</option>
+                    {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                        </option>
+                    ))}
+                </select>
+                <select
+                    name="feedback_type"
+                    value={formData.feedback_type}
+                    onChange={handleChange}
+                    required
+                >
+                    <option value="">Select Feedback Type</option>
+                    <option value="Complaint">Complaint</option>
+                    <option value="Suggestion">Suggestion</option>
+                    <option value="Appreciation">Appreciation</option>
+                </select>
+                <textarea
+                    name="comments"
+                    value={formData.comments}
+                    onChange={handleChange}
+                    placeholder="Enter your feedback here"
+                    required
+                />
+                <button type="submit">Submit</button>
             </form>
 
-            {message && <p className="message">{message}</p>}
+            {successMessage && <p className="success">{successMessage}</p>}
+            {errorMessage && <p className="error">{errorMessage}</p>}
         </div>
     );
 };
