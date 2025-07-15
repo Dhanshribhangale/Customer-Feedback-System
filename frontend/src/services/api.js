@@ -5,7 +5,7 @@ const apiClient = axios.create({
     baseURL: 'http://localhost:8000/api/',
 });
 
-// ✅ Add access token to each request
+// ✅ Automatically attach access token to all requests
 apiClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('accessToken');
@@ -17,25 +17,7 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// ✅ Feedback submission (used by customers)
-export const submitFeedback = (data) =>
-    apiClient.post('feedback/', data);
-
-// ✅ Login - store tokens
-export const login = async (credentials) => {
-    const response = await apiClient.post('/token/', credentials);
-    localStorage.setItem('accessToken', response.data.access);
-    localStorage.setItem('refreshToken', response.data.refresh);
-    return response.data;
-};
-
-// ✅ Logout - remove tokens
-export const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-};
-
-// ✅ Decode JWT to extract user role
+// ✅ Decode JWT to get user role
 export const getUserRole = () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
@@ -50,7 +32,26 @@ export const getUserRole = () => {
     }
 };
 
-// ✅ Main API services
+// ✅ Auth: Login
+export const login = async (credentials) => {
+    const response = await apiClient.post('/token/', credentials);
+    localStorage.setItem('accessToken', response.data.access);
+    localStorage.setItem('refreshToken', response.data.refresh);
+    return response.data;
+};
+
+// ✅ Auth: Logout
+export const logout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+};
+
+// ✅ Custom Action: Remind Employee (HEAD only)
+export const remindEmployee = (feedbackId) => {
+    return apiClient.post(`feedback/${feedbackId}/remind_employee/`);
+};
+
+// ✅ Main API methods
 const api = {
     getFeedback() {
         return apiClient.get('feedback/');
@@ -70,8 +71,6 @@ const api = {
     getReport() {
         return apiClient.get('feedback/report/');
     },
-    
-    // ✅ Optional: use api.get('/any-endpoint/') style
     get(url) {
         return apiClient.get(url);
     }

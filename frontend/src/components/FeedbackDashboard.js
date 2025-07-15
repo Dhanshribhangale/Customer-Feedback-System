@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api, { getUserRole } from '../services/api';
+import api, { getUserRole, remindEmployee } from '../services/api';
 import SentimentChart from './SentimentChart';
 import FeedbackReportChart from './FeedbackReportChart';
 import ReactPaginate from 'react-paginate';
@@ -7,6 +7,7 @@ import { Navigate } from 'react-router-dom';
 import './FeedbackDashboard.css';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 
 const FeedbackDashboard = () => {
@@ -114,7 +115,7 @@ const FeedbackDashboard = () => {
             item.response || '-',
         ]);
 
-        doc.autoTable({
+        autoTable(doc,{
             head: [['Name', 'Email', 'Type', 'Comments', 'Sentiment', 'Status', 'Response']],
             body: tableData,
             startY: 20,
@@ -124,16 +125,11 @@ const FeedbackDashboard = () => {
         doc.save('feedback_report.pdf');
     };
 
+    const handlePageClick = ({ selected }) => setCurrentPage(selected);
+
     const offset = currentPage * itemsPerPage;
     const currentItems = filteredFeedback.slice(offset, offset + itemsPerPage);
     const pageCount = Math.ceil(filteredFeedback.length / itemsPerPage);
-
-    const handlePageClick = ({ selected }) => setCurrentPage(selected);
-
-    if (!roleChecked) return null;
-    if (role === 'customer') return <Navigate to="/" />;
-    if (loading) return <p>Loading feedback...</p>;
-    if (error) return <p className="error">{error}</p>;
 
     const handleReplySubmit = async (feedbackId) => {
         if (!replyText.trim()) return;
@@ -143,7 +139,6 @@ const FeedbackDashboard = () => {
             alert('Reply sent successfully.');
             setReplyText('');
             setReplyingToId(null);
-
             const res = await api.getFeedback();
             setFeedbackList(res.data);
         } catch (err) {
@@ -151,6 +146,21 @@ const FeedbackDashboard = () => {
             alert('Failed to send reply.');
         }
     };
+
+    const handleRemind = async (feedbackId) => {
+        try {
+            await remindEmployee(feedbackId);
+            alert('Reminder email sent to the employee.');
+        } catch (error) {
+            console.error('Reminder failed:', error);
+            alert('Failed to send reminder.');
+        }
+    };
+
+    if (!roleChecked) return null;
+    if (role === 'customer') return <Navigate to="/" />;
+    if (loading) return <p>Loading feedback...</p>;
+    if (error) return <p className="error">{error}</p>;
 
     return (
         <div className="dashboard-container">
@@ -222,30 +232,33 @@ const FeedbackDashboard = () => {
                                     <td className={`sentiment-${item.sentiment?.toLowerCase()}`}>{item.sentiment}</td>
                                     <td>{item.status}</td>
                                     <td>{item.response || '-'}</td>
-                                    {role === 'employee' && (
-                                        <td>
-                                            {item.status !== 'Closed' ? (
-                                                replyingToId === item.id ? (
-                                                    <div>
-                                                        <textarea
-                                                            value={replyText}
-                                                            onChange={e => setReplyText(e.target.value)}
-                                                            rows={2}
-                                                            cols={25}
-                                                            placeholder="Write your reply..."
-                                                        />
-                                                        <br />
-                                                        <button onClick={() => handleReplySubmit(item.id)}>Send</button>
-                                                        <button onClick={() => setReplyingToId(null)}>Cancel</button>
-                                                    </div>
-                                                ) : (
-                                                    <button onClick={() => setReplyingToId(item.id)}>Reply</button>
-                                                )
+                                    <td>
+                                        {role === 'employee' && item.status !== 'Closed' ? (
+                                            replyingToId === item.id ? (
+                                                <div>
+                                                    <textarea
+                                                        value={replyText}
+                                                        onChange={e => setReplyText(e.target.value)}
+                                                        rows={2}
+                                                        cols={25}
+                                                        placeholder="Write your reply..."
+                                                    />
+                                                    <br />
+                                                    <button onClick={() => handleReplySubmit(item.id)}>Send</button>
+                                                    <button onClick={() => setReplyingToId(null)}>Cancel</button>
+                                                </div>
                                             ) : (
-                                                'Closed'
+                                                <button onClick={() => setReplyingToId(item.id)}>Reply</button>
+                                            )
+                                        ) : null}
+
+                                        {role === 'head' &&
+                                            item.sentiment === 'Negative' &&
+                                            item.status === 'Pending' &&
+                                            !item.response && (
+                                                <button onClick={() => handleRemind(item.id)}>Remind Employee</button>
                                             )}
-                                        </td>
-                                    )}
+                                    </td>
                                 </tr>
                             ))
                         ) : (

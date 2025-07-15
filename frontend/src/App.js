@@ -48,6 +48,7 @@ function App() {
         <Router>
             <div className="App">
                 <nav className="navbar">
+                    <h1>Customer Feedback</h1>
                     {!isLoggedIn && (
                         <>
                             <Link to="/register" className="nav-link">Register</Link>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import './UserRegistrationForm.css';
 
 const UserRegistrationForm = () => {
     const [formData, setFormData] = useState({
@@ -67,7 +68,7 @@ const UserRegistrationForm = () => {
     };
 
     return (
-        <div className="form-container">
+        <div className="newformcontainer">
             <h2>User Registration</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">

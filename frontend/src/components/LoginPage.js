@@ -42,7 +42,7 @@ const LoginPage = ({ onLogin }) => {
     };
 
     return (
-        <div className="form-container">
+        <div className ="newformcontainer">
             <h2>Login</h2>
             {successMessage && <p className="success">{successMessage}</p>}
             <form onSubmit={handleSubmit}>
